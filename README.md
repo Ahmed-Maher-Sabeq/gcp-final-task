@@ -75,8 +75,55 @@ Before you begin, ensure you have:
    - [Docker](https://docs.docker.com/get-docker/)
 
 3. **GCP Service Account**
-   - Service account with appropriate permissions
+   - Service account with appropriate permissions (see below)
    - JSON key file downloaded
+
+### Service Account Permissions
+
+Create a service account with the following IAM roles:
+
+```bash
+# Create service account
+gcloud iam service-accounts create terraform-sa \
+    --display-name="Terraform Service Account"
+
+# Assign required roles
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+    --member="serviceAccount:terraform-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/compute.admin"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+    --member="serviceAccount:terraform-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/container.admin"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+    --member="serviceAccount:terraform-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/iam.serviceAccountAdmin"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+    --member="serviceAccount:terraform-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/iam.serviceAccountUser"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+    --member="serviceAccount:terraform-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/artifactregistry.admin"
+
+gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+    --member="serviceAccount:terraform-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+    --role="roles/servicenetworking.networksAdmin"
+
+# Create and download key
+gcloud iam service-accounts keys create terraform-key.json \
+    --iam-account=terraform-sa@YOUR_PROJECT_ID.iam.gserviceaccount.com
+```
+
+**Required Roles:**
+- `roles/compute.admin` - Manage Compute Engine resources (VMs, networks, firewalls)
+- `roles/container.admin` - Manage GKE clusters and node pools
+- `roles/iam.serviceAccountAdmin` - Create and manage service accounts
+- `roles/iam.serviceAccountUser` - Use service accounts
+- `roles/artifactregistry.admin` - Manage Artifact Registry repositories
+- `roles/servicenetworking.networksAdmin` - Manage VPC and networking
 
 4. **Required GCP APIs**
    ```bash
