@@ -184,36 +184,101 @@ kubectl apply -f ingress.yaml
 
 ## 📝 Deployment Steps
 
-### Step 1: Infrastructure Provisioning
+### Step 1: Enable Required GCP APIs
 
-The Terraform configuration creates:
+```bash
+gcloud services enable compute.googleapis.com
+gcloud services enable container.googleapis.com
+gcloud services enable artifactregistry.googleapis.com
+gcloud services enable servicenetworking.googleapis.com
+```
 
-- Custom VPC with two subnets (management and restricted)
-- Cloud NAT for outbound internet access
-- Firewall rules for secure communication
-- Private GKE cluster with 2 nodes
-- Management VM for cluster access
-- Google Artifact Registry for container images
+### Step 2: Configure Terraform Variables
 
-![GKE Cluster](images/gke-cluster.png)
+Edit `terraform/terraform.tfvars` with your project details:
 
-### Step 2: Container Image Build
+```hcl
+project_id = "your-project-id"
+region     = "us-central1"
+```
 
-Build the Python application Docker image and push to Artifact Registry:
+### Step 3: Initialize and Apply Terraform
 
-![Private GCR Repository](images/private-gcr-repo-containing-the-python-app-image.png)
+```bash
+cd terraform
+terraform init
+terraform plan
+terraform apply
+```
 
-### Step 3: Kubernetes Deployment
+This will create:
+- VPC with management and restricted subnets
+- Cloud NAT gateway
+- Firewall rules
+- Private GKE cluster
+- Management VM
+- Google Artifact Registry
 
-Deploy Redis and the Python application to the GKE cluster:
+### Step 4: Build and Push Docker Image
 
-![Management VM and Cluster Resources](images/management-vm%20showing%20all%20resources%20on%20the%20cluster.png)
+```bash
+# Configure Docker authentication
+gcloud auth configure-docker us-central1-docker.pkg.dev
 
-### Step 4: Cluster Nodes
+# Navigate to application directory
+cd ../DevOps-Challenge-Demo-Code-master
 
-View the worker nodes in the cluster:
+# Build the Docker image
+docker build -t us-central1-docker.pkg.dev/YOUR_PROJECT_ID/gcp-infrastructure-repo/python-web-app:latest .
 
-![Management VM and Worker Nodes](images/management-vm+cluster-worker-nodes.png)
+# Push to Artifact Registry
+docker push us-central1-docker.pkg.dev/YOUR_PROJECT_ID/gcp-infrastructure-repo/python-web-app:latest
+```
+
+### Step 5: Access Management VM
+
+```bash
+# SSH into the management VM
+gcloud compute ssh management-vm --zone=us-central1-a
+
+# Configure kubectl to access the private cluster
+gcloud container clusters get-credentials private-gke-cluster \
+    --zone=us-central1-a \
+    --internal-ip
+```
+
+### Step 6: Deploy Kubernetes Resources
+
+```bash
+# Deploy Redis StatefulSet
+kubectl apply -f redis-statefulset.yaml
+
+# Deploy Python application
+kubectl apply -f app-deployment.yaml
+
+# Deploy Ingress for load balancer
+kubectl apply -f ingress.yaml
+```
+
+### Step 7: Wait for Load Balancer Provisioning
+
+```bash
+# Monitor ingress status (takes 5-10 minutes)
+kubectl get ingress python-web-app-ingress -w
+
+# Check detailed status
+kubectl describe ingress python-web-app-ingress
+```
+
+### Step 8: Access the Application
+
+```bash
+# Get the external IP address
+kubectl get ingress python-web-app-ingress
+
+# Test the application
+curl http://<EXTERNAL-IP>
+```
 
 ## ✔️ Verification
 
@@ -257,6 +322,26 @@ kubectl get ingress python-web-app-ingress
 # Test the application
 curl http://<EXTERNAL-IP>
 ```
+
+## 📊 Results
+
+### GKE Cluster
+
+![GKE Cluster](images/gke-cluster.png)
+
+### Private Artifact Registry
+
+![Private GCR Repository](images/private-gcr-repo-containing-the-python-app-image.png)
+
+### Management VM - Cluster Resources
+
+![Management VM and Cluster Resources](images/management-vm%20showing%20all%20resources%20on%20the%20cluster.png)
+
+### Management VM - Worker Nodes
+
+![Management VM and Worker Nodes](images/management-vm+cluster-worker-nodes.png)
+
+### Web Application
 
 ![Web Application](images/web-app-page.png)
 
@@ -305,18 +390,7 @@ kubectl get svc python-web-app-service
 # Then apply: kubectl apply -f app-deployment.yaml
 ```
 
-### Issue: Cannot Access Management VM
 
-**Symptom**: SSH connection fails
-
-**Solution**: Check firewall rules and IAP settings
-
-```bash
-# Use IAP tunnel
-gcloud compute ssh management-vm \
-    --zone=us-central1-a \
-    --tunnel-through-iap
-```
 
 ### Issue: Docker Push Fails
 
@@ -330,21 +404,5 @@ gcloud auth print-access-token | docker login -u oauth2accesstoken \
     --password-stdin https://us-central1-docker.pkg.dev
 ```
 
-## 📚 Additional Resources
 
-- [Terraform GCP Provider Documentation](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
-- [GKE Documentation](https://cloud.google.com/kubernetes-engine/docs)
-- [Kubernetes Documentation](https://kubernetes.io/docs/home/)
-- [Google Artifact Registry](https://cloud.google.com/artifact-registry/docs)
 
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 👥 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-**Note**: This infrastructure is designed for development/testing purposes. For production use, consider additional security hardening, monitoring, and backup strategies.
