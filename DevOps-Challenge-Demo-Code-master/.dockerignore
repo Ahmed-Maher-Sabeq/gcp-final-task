@@ -1,0 +1,13 @@
+# Docker ignore file
+.git
+.gitignore
+README.md
+LICENSE
+.env
+tests/
+*.pyc
+__pycache__/
+.pytest_cache/
+.coverage
+.DS_Store
+Thumbs.db

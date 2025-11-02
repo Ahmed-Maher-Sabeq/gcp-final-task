@@ -1,0 +1,63 @@
+# Ingress configuration for external HTTP access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: python-web-app-ingress
+  labels:
+    app: python-web-app
+  annotations:
+    # Use GCP HTTP Load Balancer
+    kubernetes.io/ingress.class: "gce"
+    # Enable HTTP to HTTPS redirect
+    kubernetes.io/ingress.allow-http: "true"
+    # Backend configuration for health checks
+    cloud.google.com/backend-config: '{"default": "python-web-app-backend-config"}'
+    # Global static IP (optional - can be created separately)
+    # kubernetes.io/ingress.global-static-ip-name: "python-web-app-ip"
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /*
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: python-web-app-service
+            port:
+              number: 80
+---
+# Backend configuration for health checks and other settings
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: python-web-app-backend-config
+spec:
+  healthCheck:
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+    type: HTTP
+    requestPath: /
+    port: 8000
+  connectionDraining:
+    drainingTimeoutSec: 60
+  timeoutSec: 30
+---
+# Optional: Static IP address for the load balancer
+# Uncomment if you want a reserved static IP
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: python-web-app-lb
+#   annotations:
+#     cloud.google.com/load-balancer-type: "External"
+# spec:
+#   type: LoadBalancer
+#   loadBalancerIP: "STATIC_IP_ADDRESS"
+#   ports:
+#   - port: 80
+#     targetPort: 8000
+#     protocol: TCP
+#   selector:
+#     app: python-web-app

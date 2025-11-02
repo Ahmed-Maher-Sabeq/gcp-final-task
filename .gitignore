@@ -1,0 +1,16 @@
+# Terraform files (exist in terraform/)
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+
+# GCP Service Account Keys (exist in terraform/)
+terraform/*.json
+
+
+# IDE files (common)
+.vscode/
+.idea/
+.kiro/
+
