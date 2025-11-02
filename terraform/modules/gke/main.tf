@@ -91,6 +91,7 @@ resource "google_container_cluster" "private_cluster" {
   
   # Security configuration
   enable_shielded_nodes = true
+  deletion_protection   = false
   
   # Use default maintenance policy
   
